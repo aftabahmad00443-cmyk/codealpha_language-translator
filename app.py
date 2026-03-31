@@ -1,50 +1,71 @@
 import streamlit as st
-from googletrans import Translator, LANGUAGES
+from googletrans import Translator
 from gtts import gTTS
-from gtts.lang import tts_langs
-from io import BytesIO
+import os
 
-# Initialize translator and TTS languages
+st.set_page_config(page_title="Language Translator", layout="centered")
+
+st.title("🌐 Language Translator with Speech")
+st.write("Translate text and hear it spoken!")
+
 translator = Translator()
-gtts_langs = tts_langs()
 
-st.set_page_config(page_title="Language Translator", layout="wide")
-st.title("🌐 Language Translator with TTS")
+# Language options (googletrans LANGUAGES se)
+LANGUAGES = {
+    'af': 'Afrikaans', 'sq': 'Albanian', 'am': 'Amharic', 'ar': 'Arabic',
+    'hy': 'Armenian', 'az': 'Azerbaijani', 'eu': 'Basque', 'be': 'Belarusian',
+    'bn': 'Bengali', 'bs': 'Bosnian', 'bg': 'Bulgarian', 'ca': 'Catalan',
+    'ceb': 'Cebuano', 'zh-cn': 'Chinese (Simplified)', 'zh-tw': 'Chinese (Traditional)',
+    'co': 'Corsican', 'hr': 'Croatian', 'cs': 'Czech', 'da': 'Danish',
+    'nl': 'Dutch', 'en': 'English', 'eo': 'Esperanto', 'et': 'Estonian',
+    'fi': 'Finnish', 'fr': 'French', 'fy': 'Frisian', 'gl': 'Galician',
+    'ka': 'Georgian', 'de': 'German', 'el': 'Greek', 'gu': 'Gujarati',
+    'ht': 'Haitian Creole', 'ha': 'Hausa', 'haw': 'Hawaiian', 'he': 'Hebrew',
+    'hi': 'Hindi', 'hmn': 'Hmong', 'hu': 'Hungarian', 'is': 'Icelandic',
+    'ig': 'Igbo', 'id': 'Indonesian', 'ga': 'Irish', 'it': 'Italian',
+    'ja': 'Japanese', 'jw': 'Javanese', 'kn': 'Kannada', 'kk': 'Kazakh',
+    'km': 'Khmer', 'ko': 'Korean', 'ku': 'Kurdish', 'ky': 'Kyrgyz',
+    'lo': 'Lao', 'la': 'Latin', 'lv': 'Latvian', 'lt': 'Lithuanian',
+    'lb': 'Luxembourgish', 'mk': 'Macedonian', 'mg': 'Malagasy', 'ms': 'Malay',
+    'ml': 'Malayalam', 'mt': 'Maltese', 'mi': 'Maori', 'mr': 'Marathi',
+    'mn': 'Mongolian', 'my': 'Myanmar (Burmese)', 'ne': 'Nepali', 'no': 'Norwegian',
+    'ps': 'Pashto', 'fa': 'Persian', 'pl': 'Polish', 'pt': 'Portuguese',
+    'pa': 'Punjabi', 'ro': 'Romanian', 'ru': 'Russian', 'sm': 'Samoan',
+    'gd': 'Scots Gaelic', 'sr': 'Serbian', 'st': 'Sesotho', 'sn': 'Shona',
+    'sd': 'Sindhi', 'si': 'Sinhala', 'sk': 'Slovak', 'sl': 'Slovenian',
+    'so': 'Somali', 'es': 'Spanish', 'su': 'Sundanese', 'sw': 'Swahili',
+    'sv': 'Swedish', 'tg': 'Tajik', 'ta': 'Tamil', 'te': 'Telugu',
+    'th': 'Thai', 'tr': 'Turkish', 'uk': 'Ukrainian', 'ur': 'Urdu',
+    'uz': 'Uzbek', 'vi': 'Vietnamese', 'cy': 'Welsh', 'xh': 'Xhosa',
+    'yi': 'Yiddish', 'yo': 'Yoruba', 'zu': 'Zulu'
+}
 
-# Prepare language options
-lang_options = {name.title(): code for code, name in LANGUAGES.items()}
+col1, col2 = st.columns(2)
+with col1:
+    source_lang = st.selectbox("Source Language", options=list(LANGUAGES.keys()), format_func=lambda x: LANGUAGES[x], index=list(LANGUAGES.keys()).index("en"))
+with col2:
+    target_lang = st.selectbox("Target Language", options=list(LANGUAGES.keys()), format_func=lambda x: LANGUAGES[x], index=list(LANGUAGES.keys()).index("ur") if "ur" in LANGUAGES else 21)
 
-# Sidebar for language selection
-source_lang_name = st.selectbox("Select Source Language", options=list(lang_options.keys()), index=0)
-target_lang_name = st.selectbox("Select Target Language", options=list(lang_options.keys()), index=0)
+text = st.text_area("Enter text to translate", height=150, placeholder="mera naam aftab ahmad hai...")
 
-source_lang = lang_options[source_lang_name]
-target_lang = lang_options[target_lang_name]
-
-# Text input
-text_input = st.text_area("Enter text to translate:", "", height=150)
-
-# Translate & Speak button
-if st.button("Translate & Speak"):
-    if not text_input.strip():
-        st.warning("Please enter some text to translate.")
+if st.button("Translate & Speak", type="primary"):
+    if not text.strip():
+        st.error("Please enter some text!")
     else:
-        try:
-            # Translate text
-            translated = translator.translate(text_input, src=source_lang, dest=target_lang)
-            st.subheader("Translated Text:")
-            st.write(translated.text)
+        with st.spinner("Translating..."):
+            try:
+                translated = translator.translate(text, src=source_lang, dest=target_lang)
+                st.success("**Translated Text:**")
+                st.write(translated.text)
 
-            # Safe TTS
-            tts_lang = target_lang if target_lang in gtts_langs else "en"
-            tts = gTTS(translated.text, lang=tts_lang)
-
-            # Save to BytesIO to avoid creating temporary files
-            audio_bytes = BytesIO()
-            tts.write_to_fp(audio_bytes)
-            audio_bytes.seek(0)
-
-            st.audio(audio_bytes, format="audio/mp3")
-
-        except Exception as e:
-            st.error(f"Error: {e}")
+                # Generate speech
+                tts = gTTS(translated.text, lang=target_lang if target_lang in ['en','hi','ur','ar','fr','es','de'] else 'en')
+                audio_file = "translation.mp3"
+                tts.save(audio_file)
+                
+                st.audio(audio_file, format="audio/mp3")
+                os.remove(audio_file)  # cleanup
+                
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
+                st.info("Tip: Sometimes googletrans is unstable. Try again or change languages.")
