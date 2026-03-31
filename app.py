@@ -1,47 +1,52 @@
-import gradio as gr
+import streamlit as st
 from googletrans import Translator, LANGUAGES
 from gtts import gTTS
 from gtts.lang import tts_langs
-from IPython.display import Audio
+import os
+from io import BytesIO
+import base64
 
-# Initialize translator and supported TTS languages
+# Initialize translator and TTS languages
 translator = Translator()
 gtts_langs = tts_langs()
 
-def translate_and_speak(text, source_lang, target_lang):
-    if not text:
-        return "Please enter some text.", None
-    
-    # Translate text using Google Translate
-    translated = translator.translate(text, src=source_lang, dest=target_lang)
-    
-    # Safe TTS: fallback to English if language not supported
-    tts_lang = target_lang if target_lang in gtts_langs else 'en'
-    tts = gTTS(translated.text, lang=tts_lang)
-    audio_file = "translated_audio.mp3"
-    tts.save(audio_file)
-    
-    return translated.text, audio_file
+st.set_page_config(page_title="Language Translator", layout="wide")
 
-# Prepare language options for dropdowns
-lang_options = [(name.title(), code) for code, name in LANGUAGES.items()]
+st.title("🌐 Language Translator with TTS")
 
-# Create Gradio interface
-iface = gr.Interface(
-    fn=translate_and_speak,
-    inputs=[
-        gr.Textbox(label="Enter Text", placeholder="Type text to translate..."),
-        gr.Dropdown(lang_options, label="Source Language", value="en"),
-        gr.Dropdown(lang_options, label="Target Language", value="es")
-    ],
-    outputs=[
-        gr.Textbox(label="Translated Text"),
-        gr.Audio(label="Spoken Translation")
-    ],
-    title="Gradio Language Translator",
-    description="Translate text between languages and hear it spoken."
-)
+# Sidebar for language selection
+source_lang = st.selectbox(
+    "Select Source Language",
+    options=[(name.title(), code) for code, name in LANGUAGES.items()],
+    format_func=lambda x: x[0],
+)[1]
 
-# Launch the app
-if __name__ == "__main__":
-    iface.launch()
+target_lang = st.selectbox(
+    "Select Target Language",
+    options=[(name.title(), code) for code, name in LANGUAGES.items()],
+    format_func=lambda x: x[0],
+)[1]
+
+# Text input
+text_input = st.text_area("Enter text to translate:", "", height=150)
+
+# Translate button
+if st.button("Translate & Speak"):
+    if not text_input.strip():
+        st.warning("Please enter some text to translate.")
+    else:
+        # Translate
+        translated = translator.translate(text_input, src=source_lang, dest=target_lang)
+        st.subheader("Translated Text:")
+        st.write(translated.text)
+
+        # Safe TTS
+        tts_lang = target_lang if target_lang in gtts_langs else 'en'
+        tts = gTTS(translated.text, lang=tts_lang)
+        
+        # Save audio to BytesIO
+        audio_bytes = BytesIO()
+        tts.write_to_fp(audio_bytes)
+        audio_bytes.seek(0)
+        
+        st.audio(audio_bytes, format="audio/mp3")
