@@ -1,19 +1,17 @@
 import streamlit as st
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 from gtts import gTTS
 import os
 
 st.set_page_config(page_title="Aftab Translator", page_icon="🌐", layout="centered")
 
 st.title("🌍 Language Translator with Voice")
-st.markdown("**Translate text and listen to it**")
+st.markdown("**Translate text and listen to it** - Powered by Deep Translator")
 
-translator = Translator()
-
-# Common languages (googletrans supported)
+# Popular languages
 LANGUAGES = {
     'en': 'English', 'ur': 'Urdu', 'hi': 'Hindi', 'ar': 'Arabic',
-    'fr': 'French', 'es': 'Spanish', 'de': 'German', 'zh-cn': 'Chinese (Simplified)',
+    'fr': 'French', 'es': 'Spanish', 'de': 'German', 'zh-CN': 'Chinese (Simplified)',
     'ru': 'Russian', 'ja': 'Japanese', 'ko': 'Korean', 'it': 'Italian',
     'pt': 'Portuguese', 'tr': 'Turkish', 'bn': 'Bengali', 'pa': 'Punjabi'
 }
@@ -27,25 +25,27 @@ with col2:
     tgt_lang = st.selectbox("To (Target)", options=list(LANGUAGES.keys()), 
                            format_func=lambda x: LANGUAGES[x], index=1)
 
-text_input = st.text_area("Enter text here:", height=150, 
-                         placeholder="mera naam aftab ahmad hai...")
+text_input = st.text_area("Enter text here:", height=180, 
+                         placeholder="mera naam aftab ahmad hai mai khana khata hun...")
 
 if st.button("🔄 Translate & Speak", type="primary"):
     if not text_input.strip():
-        st.error("Please type something to translate!")
+        st.error("Please enter some text!")
     else:
         with st.spinner("Translating..."):
             try:
-                result = translator.translate(text_input, src=src_lang, dest=tgt_lang)
+                # Translate using deep-translator
+                translated = GoogleTranslator(source=src_lang, target=tgt_lang).translate(text_input)
                 
                 st.success("**Translated Text:**")
-                st.write(result.text)
+                st.write(translated)
                 
-                # Generate speech (gTTS)
-                with st.spinner("Generating audio..."):
-                    tts_lang = tgt_lang if tgt_lang in ['en', 'hi', 'ur', 'ar', 'fr', 'es', 'de'] else 'en'
-                    tts = gTTS(result.text, lang=tts_lang)
-                    audio_path = "output.mp3"
+                # Text to Speech
+                with st.spinner("Generating voice..."):
+                    # gTTS supports limited languages well
+                    tts_lang = tgt_lang if tgt_lang in ['en', 'hi', 'ur', 'ar', 'fr', 'es', 'de', 'it', 'pt'] else 'en'
+                    tts = gTTS(translated, lang=tts_lang)
+                    audio_path = "translation.mp3"
                     tts.save(audio_path)
                     
                     st.audio(audio_path, format="audio/mp3")
@@ -55,5 +55,5 @@ if st.button("🔄 Translate & Speak", type="primary"):
                         os.remove(audio_path)
                         
             except Exception as e:
-                st.error(f"Something went wrong: {str(e)}")
-                st.info("Tip: Google Translate sometimes blocks requests. Try again after some time or change languages.")
+                st.error(f"Error: {str(e)}")
+                st.info("Sometimes the translator service is slow or blocked. Please try again in a few seconds.")
